@@ -3,178 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QC Barcode - Scanner & Générateur</title>
+    <title>Générateur QC - Compatible Inlite</title>
     <script src="https://unpkg.com/bwip-js@3.0.4/dist/bwip-js-min.js"></script>
-    <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
     <style>
         :root { --primary: #007bff; --success: #28a745; --bg: #f4f6f9; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 10px; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 10px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #2c3e50; }
         
-        /* Fenêtre de scan améliorée */
-        #video-container { 
-            display: none; position: relative; width: 100%; height: 300px; 
-            background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 15px;
-        }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Guide de visée (Rectangle rouge) */
-        .scanner-laser {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%; height: 40%;
-            border: 2px solid red; border-radius: 4px;
-            box-shadow: 0 0 15px rgba(255,0,0,0.5);
-            pointer-events: none;
-        }
-
-        .grid { display: flex; flex-direction: column; gap: 12px; }
-        .row { display: flex; gap: 10px; }
+        /* Grille flexible */
+        .grid { display: flex; flex-direction: column; gap: 15px; }
+        .row { display: flex; gap: 15px; }
         .row > div { flex: 1; }
-        label { display: block; font-weight: bold; font-size: 0.8em; color: #666; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
         
-        .btn-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        button { flex: 1; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: #fff; }
-        .btn-scan { background: var(--primary); }
-        .btn-gen { background: var(--success); }
-        .btn-stop { background: #d33; width: 100%; margin-bottom: 10px; display: none; }
+        label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 5px; color: #555; }
+        
+        input, select { 
+            width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; 
+            font-size: 16px; /* Évite le zoom iOS */
+            box-sizing: border-box; background: #fff; transition: border 0.2s;
+        }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
+        
+        button { 
+            width: 100%; padding: 18px; background: var(--success); color: #fff; 
+            border: none; border-radius: 8px; cursor: pointer; font-weight: 700; 
+            font-size: 1.1rem; margin-top: 25px; 
+        }
+        button:active { transform: scale(0.98); background: #218838; }
 
-        #output { margin-top: 20px; text-align: center; display: none; padding: 10px; border: 1px dashed #aaa; }
-        canvas { max-width: 100%; height: auto; }
+        #output { 
+            margin-top: 30px; text-align: center; display: none; 
+            background: #fff; padding: 15px; border-radius: 8px; border: 1px dashed #ccc;
+        }
+        canvas { max-width: 100%; height: auto !important; }
+        .download-btn { background: var(--primary); margin-top: 15px; padding: 12px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <button id="btnStop" class="btn-stop" onclick="stopScan()">Annuler le scan</button>
-    <div id="video-container">
-        <video id="video"></video>
-        <div class="scanner-laser"></div>
-    </div>
-
-    <div class="btn-group">
-        <button class="btn-scan" onclick="startScan()">📷 Scanner Permis</button>
-        <button class="btn-gen" onclick="generate()">⚙️ Générer</button>
-    </div>
-
+    <h2>Générateur QC (Inlite)</h2>
     <div class="grid">
         <div class="row">
-            <div><label>Nom</label><input type="text" id="lastName"></div>
-            <div><label>Prénom</label><input type="text" id="firstName"></div>
+            <div><label>Nom (DCS)</label><input type="text" id="lastName" placeholder="GINGRAS-BOUTIN"></div>
+            <div><label>Prénom (DAC)</label><input type="text" id="firstName" placeholder="KEVEN"></div>
         </div>
+        
+        <div><label>2e Prénom (DAD)</label><input type="text" id="middleName" placeholder="Laisser vide si aucun"></div>
+        
         <div class="row">
-            <div><label>Naissance</label><input type="text" id="dob" placeholder="AAAAMMJJ"></div>
-            <div><label>Sexe</label><select id="sex"><option value="1">M</option><option value="2">F</option></select></div>
+            <div><label>Naissance (YYYYMMDD)</label><input type="text" id="dob" inputmode="numeric" placeholder="19890713"></div>
+            <div><label>Sexe (DBC)</label><select id="sex"><option value="1">Masculin (1)</option><option value="2">Féminin (2)</option></select></div>
         </div>
-        <div><label>Numéro de Permis</label><input type="text" id="dlNum"></div>
-        <div><label>Adresse</label><input type="text" id="address"></div>
+
         <div class="row">
-            <div><label>Ville</label><input type="text" id="city"></div>
-            <div><label>Émission</label><input type="text" id="issueDate"></div>
+            <div><label>Taille (cm)</label><input type="text" id="height" inputmode="numeric" placeholder="182"></div>
+            <div>
+                <label>Yeux</label>
+                <select id="eyes">
+                    <option value="BLK">Noir (BLK)</option>
+                    <option value="BLU" selected>Bleu (BLU)</option>
+                    <option value="BRO">Brun (BRO)</option>
+                    <option value="GRN">Vert (GRN)</option>
+                    <option value="HAZ">Noisette (HAZ)</option>
+                    <option value="GRY">Gris (GRY)</option>
+                </select>
+            </div>
         </div>
+
+        <div><label>Adresse (DAG)</label><input type="text" id="address" placeholder="1910 AV BERGEMONT"></div>
+        
         <div class="row">
-            <div><label>Expiration</label><input type="text" id="expiryDate"></div>
-            <div><label>Réf / DD</label><input type="text" id="dd"></div>
+            <div><label>Ville (DAI)</label><input type="text" id="city" placeholder="QUEBEC"></div>
+            <div><label>Code Postal (DAK)</label><input type="text" id="zip" placeholder="G1J3T3"></div>
         </div>
+
+        <div><label>Numéro de Permis (DAQ)</label><input type="text" id="dlNum" placeholder="G526513078902"></div>
+
+        <div class="row">
+            <div><label>Émission (DBD)</label><input type="text" id="issueDate" inputmode="numeric" placeholder="20250813"></div>
+            <div><label>Expiration (DBA)</label><input type="text" id="expiryDate" inputmode="numeric" placeholder="20290713"></div>
+        </div>
+
+        <div><label>No de Ref. (DCF)</label><input type="text" id="dd" placeholder="R4MVQLH36"></div>
     </div>
+
+    <button onclick="generate()">GÉNÉRER CODE-BARRES</button>
 
     <div id="output">
         <canvas id="barcodeCanvas"></canvas>
+        <button class="download-btn" onclick="downloadImg()">Télécharger l'image</button>
     </div>
 </div>
 
 <script>
-    let codeReader = null;
-
-    async function startScan() {
-        const videoContainer = document.getElementById('video-container');
-        const btnStop = document.getElementById('btnStop');
-        videoContainer.style.display = 'block';
-        btnStop.style.display = 'block';
-
-        // Initialisation avec focus PDF417 uniquement
-        codeReader = new ZXing.BrowserMultiFormatReader();
-        const hints = new Map();
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.PDF_417]);
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true); // Mode lecture intense
-
-        try {
-            const videoDevices = await codeReader.listVideoInputDevices();
-            // On cherche la caméra arrière (back camera)
-            const backCamera = videoDevices.find(device => device.label.toLowerCase().includes('back')) || videoDevices[videoDevices.length - 1];
-            
-            codeReader.decodeFromVideoDevice(backCamera.deviceId, 'video', (result, err) => {
-                if (result) {
-                    if (navigator.vibrate) navigator.vibrate(100); // Vibrer si scan réussi
-                    parseAAMVA(result.text);
-                    stopScan();
-                }
-            });
-        } catch (err) {
-            console.error(err);
-            alert("Erreur caméra : " + err);
-        }
-    }
-
-    function stopScan() {
-        if(codeReader) codeReader.reset();
-        document.getElementById('video-container').style.display = 'none';
-        document.getElementById('btnStop').style.display = 'none';
-    }
-
-    function parseAAMVA(data) {
-        const extract = (code) => {
-            const regex = new RegExp(code + "(.*?)(?:\\n|\\r|$)", "i");
-            const match = data.match(regex);
-            return match ? match[1].trim() : "";
-        };
-
-        document.getElementById('lastName').value = extract('DCS');
-        document.getElementById('firstName').value = extract('DAC');
-        document.getElementById('dob').value = extract('DBB');
-        document.getElementById('address').value = extract('DAG');
-        document.getElementById('city').value = extract('DAI');
-        document.getElementById('dlNum').value = extract('DAQ');
-        document.getElementById('issueDate').value = extract('DBD');
-        document.getElementById('expiryDate').value = extract('DBA');
-        document.getElementById('dd').value = extract('DCF');
-        
-        const sex = extract('DBC');
-        if(sex === "1" || sex === "M") document.getElementById('sex').value = "1";
-        if(sex === "2" || sex === "F") document.getElementById('sex').value = "2";
-    }
-
     function generate() {
-        const LF = '\x0A'; const RS = '\x1E'; const CR = '\x0D';
+        // Caractères de contrôle AAMVA
+        const LF = '\x0A'; 
+        const RS = '\x1E'; 
+        const CR = '\x0D';
+
         const getVal = (id) => document.getElementById(id).value.toUpperCase().trim();
 
+        // --- 1. Construction du bloc DL ---
         let dlData = "DL";
-        dlData += `DCA5${LF}DCBNONE${LF}DCDNONE${LF}`;
-        dlData += `DBA${getVal('expiryDate')}${LF}DCS${getVal('lastName')}${LF}DAC${getVal('firstName')}${LF}`;
-        dlData += `DBD${getVal('issueDate')}${LF}DBB${getVal('dob')}${LF}DBC${getVal('sex')}${LF}`;
-        dlData += `DAU182 cm${LF}DAG${getVal('address')}${LF}DAI${getVal('city')}${LF}DAJQC${LF}`;
-        dlData += `DAQ${getVal('dlNum')}${LF}DCF${getVal('dd')}${LF}`;
-        dlData += `DCGCAN${LF}DDEU${LF}DDFU${LF}DDGU${LF}`;
+        
+        // Champs standards
+        dlData += `DCA5${LF}`;                     // Classe (Fixe à 5)
+        dlData += `DCBnone${LF}`;                  // Restrictions (Fixe à none)
+        dlData += `DCDnone${LF}`;                  // Endorsements (Fixe à none)
+        dlData += `DBA${getVal('expiryDate')}${LF}`;
+        dlData += `DCS${getVal('lastName')}${LF}`;
+        dlData += `DAC${getVal('firstName')}${LF}`;
+        dlData += `DAD${getVal('middleName')}${LF}`; 
+        dlData += `DBD${getVal('issueDate')}${LF}`;
+        dlData += `DBB${getVal('dob')}${LF}`;
+        dlData += `DBC${getVal('sex')}${LF}`;      // 1 ou 2
+        dlData += `DAY${getVal('eyes')}${LF}`;
+        dlData += `DAU${getVal('height')} cm${LF}`; // Ajout automatique de " cm"
+        dlData += `DAG${getVal('address')}${LF}`;
+        dlData += `DAI${getVal('city')}${LF}`;
+        dlData += `DAJQC${LF}`;
+        dlData += `DAK${getVal('zip').replace(/\s/g, '')}${LF}`;
+        dlData += `DAQ${getVal('dlNum')}${LF}`;
+        dlData += `DCF${getVal('dd')}${LF}`;       // Document Discriminator
+        
+        // Champs spécifiques pour matcher votre XML
+        dlData += `DCGCAN${LF}`;                   // Pays
+        dlData += `DDEU${LF}`;                     // Truncation indicators (séparés)
+        dlData += `DDFU${LF}`;
+        dlData += `DDGU${LF}`;
 
-        let zqData = `ZQZQAPC${LF}BS1P03E458-01${LF}`;
+        // --- 2. Construction du bloc ZQ ---
+        // Le XML montre id="A" et id="B". En brut, cela correspond souvent à ZQA et ZQB.
+        let zqData = "ZQ";
+        zqData += `ZQAPC${LF}`;             // Correspond à <element id="A">PC</element>
+        zqData += `ZQBS1P03E458-01${LF}`;   // Correspond à <element id="B">S1P...</element>
 
-        const headerStatic = `@${LF}${RS}${CR}ANSI 604428100002`;
-        const headerLen = headerStatic.length + 20;
-        const dlOffset = headerLen.toString().padStart(4, '0');
+        // --- 3. Calcul dynamique de l'en-tête (Header) ---
+        // IIN Québec: 604428, Version 10, 02 entrées
+        const headerStaticPart = `@${LF}${RS}${CR}ANSI 604428100002`; 
+        
+        // Calcul des offsets
+        // Longueur Header de base + (2 sous-fichiers * 10 caractères de pointeur)
+        const headerLength = headerStaticPart.length + 20; 
+        
+        const dlOffset = headerLength.toString().padStart(4, '0');
         const dlLen = dlData.length.toString().padStart(4, '0');
-        const zqOffset = (headerLen + dlData.length).toString().padStart(4, '0');
+        
+        const zqOffset = (headerLength + dlData.length).toString().padStart(4, '0');
         const zqLen = zqData.length.toString().padStart(4, '0');
 
-        const fullData = `${headerStatic}DL${dlOffset}${dlLen}ZQ${zqOffset}${zqLen}${dlData}${zqData}`;
+        // Assemblage final
+        const fullHeader = `${headerStaticPart}DL${dlOffset}${dlLen}ZQ${zqOffset}${zqLen}`;
+        const fullData = fullHeader + dlData + zqData;
+
+        console.log(fullData); // Pour débogage
 
         try {
             document.getElementById('output').style.display = 'block';
             bwipjs.toCanvas('barcodeCanvas', {
-                bcid: 'pdf417', text: fullData, scale: 3, height: 10, cols: 9, eclevel: 5
+                bcid: 'pdf417',
+                text: fullData,
+                scale: 3,
+                height: 10,  // Hauteur standard
+                cols: 9,     // Colonnes typiques permis QC
+                eclevel: 5   // Correction d'erreur plus élevée pour robustesse
             });
-        } catch (e) { alert(e); }
+            // Scroll vers le résultat
+            setTimeout(() => document.getElementById('output').scrollIntoView({ behavior: 'smooth' }), 100);
+        } catch (e) {
+            alert("Erreur: " + e);
+        }
+    }
+
+    function downloadImg() {
+        const canvas = document.getElementById('barcodeCanvas');
+        const link = document.createElement('a');
+        link.download = 'permis_qc.png';
+        link.href = canvas.toDataURL();
+        link.click();
     }
 </script>
+
 </body>
 </html>
